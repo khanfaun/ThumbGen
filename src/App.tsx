@@ -355,7 +355,7 @@ export default function App() {
       console.log("Sử dụng Google Drive API chính thức với API Key...");
       try {
         const fetchPage = async (pageToken?: string) => {
-          let url = `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+trashed=false&fields=nextPageToken,files(id,name,mimeType)&key=${googleApiKey}&pageSize=1000`;
+          let url = `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+trashed=false&fields=nextPageToken,files(id,name,mimeType)&key=${googleApiKey}&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true`;
           if (pageToken) url += `&pageToken=${pageToken}`;
           const res = await fetch(url);
           if (!res.ok) {
