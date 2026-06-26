@@ -8,41 +8,6 @@ async function startServer() {
 
   app.use(express.json());
 
-  // API Route: Proxy Image to bypass CORS
-  app.get("/api/proxy-image", async (req, res) => {
-    const url = req.query.url as string;
-    if (!url) {
-      res.status(400).send("Missing URL");
-      return;
-    }
-
-    try {
-      const response = await fetch(url, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        },
-      });
-
-      if (!response.ok) {
-        res
-          .status(response.status)
-          .send(`Error fetching: ${response.statusText}`);
-        return;
-      }
-
-      const contentType = response.headers.get("content-type");
-      if (contentType) res.setHeader("Content-Type", contentType);
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Cache-Control", "public, max-age=86400");
-
-      const buffer = Buffer.from(await response.arrayBuffer());
-      res.send(buffer);
-    } catch (e: any) {
-      res.status(500).send(e.toString());
-    }
-  });
-
   // API Route: Extract PNG files from a public Google Drive folder
   app.post("/api/extract-drive-folder", async (req, res) => {
     try {
@@ -226,43 +191,6 @@ async function startServer() {
           "Không thể trích xuất dữ liệu từ Google Drive. Vui lòng đảm bảo thư mục đang ở chế độ công khai (Bất kỳ ai có liên kết đều có thể xem).",
         details: error.message,
       });
-    }
-  });
-
-  // API Route: Proxy Google Drive image to avoid CORS and get original quality
-  app.get("/api/proxy-image/:id", async (req, res) => {
-    try {
-      const id = req.params.id;
-      if (!/^[a-zA-Z0-9_-]{25,}$/.test(id)) {
-        return res.status(400).send("Invalid ID");
-      }
-
-      // Attempt 1: lh3 endpoint
-      let driveUrl = `https://lh3.googleusercontent.com/d/${id}`;
-      let response = await fetch(driveUrl);
-
-      // Attempt 2: uc endpoint if lh3 fails
-      if (!response.ok) {
-        driveUrl = `https://drive.google.com/uc?export=download&id=${id}`;
-        response = await fetch(driveUrl);
-      }
-
-      if (!response.ok) {
-        return res
-          .status(response.status)
-          .send("Failed to fetch image from Google Drive");
-      }
-
-      const contentType = response.headers.get("content-type") || "image/png";
-      res.set("Content-Type", contentType);
-      res.set("Access-Control-Allow-Origin", "*");
-      res.set("Cache-Control", "public, max-age=86400");
-
-      const buffer = await response.arrayBuffer();
-      res.send(Buffer.from(buffer));
-    } catch (err) {
-      console.error("Lỗi proxy ảnh:", err);
-      res.status(500).send("Error proxying image");
     }
   });
 

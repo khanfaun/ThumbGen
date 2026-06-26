@@ -640,7 +640,12 @@ export default function App() {
       const newItems: ImageItem[] = await Promise.all(
         filtered.map(async (file) => {
           const isTiff = file.name.toLowerCase().endsWith(".tif") || file.name.toLowerCase().endsWith(".tiff");
-          let originalUrl = `/api/proxy-image?url=${encodeURIComponent(`https://drive.google.com/thumbnail?sz=w1600&id=${file.id}`)}`;
+          
+          // Sử dụng API key nếu có, nếu không thì dùng proxy ảnh miễn phí wsrv.nl chuyên dụng (không dùng Netlify function vì lỗi giới hạn)
+          let originalUrl = googleApiKey 
+            ? `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${googleApiKey}` 
+            : `https://wsrv.nl/?url=${encodeURIComponent(`https://drive.google.com/thumbnail?sz=w1600&id=${file.id}`)}&we&w=1600`;
+            
           let status: ImageItem["status"] = "pending";
           let errorMsg: string | undefined = undefined;
 
