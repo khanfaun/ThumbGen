@@ -352,13 +352,13 @@ export default function App() {
     const imageExtensions = "png|jpe?g|jfif|webp|svg|gif|heic|heif|bmp|tiff?|raw|cr2|nef|arw|dng|psd|ai|eps|pdf";
     const fileExtRegex = new RegExp(`\\.(${imageExtensions})$`, "i");
 
-    // Nếu người dùng có nhập API Key (Triệt để 100% không lỗi CORS/404)
+    // Nếu người dùng có nhập API Key
     if (googleApiKey) {
       console.log("Sử dụng Google Drive API chính thức với API Key...");
       try {
         const fetchPage = async (pageToken?: string) => {
           const query = `'${folderId}' in parents and trashed=false`;
-          let url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=nextPageToken,files(id,name,mimeType)&key=${googleApiKey}&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true`;
+          let url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=nextPageToken,files(id,name,mimeType)&key=${googleApiKey}&pageSize=1000`;
           if (pageToken) url += `&pageToken=${pageToken}`;
           
           const res = await fetch(url);
@@ -394,14 +394,20 @@ export default function App() {
           }
         };
         await fetchPage();
-        return files;
+        
+        // Nếu API Key quét thành công ra file thì trả về. Nếu = 0, có thể do lỗi scope của API key, chuyển sang proxy.
+        if (files.length > 0) {
+          return files;
+        } else {
+          console.warn("Google Drive API trả về 0 file. Có thể API Key không có quyền list public folder. Chuyển sang quét Proxy...");
+        }
       } catch (err: any) {
         console.error("Lỗi khi dùng API Key:", err);
-        throw new Error(err.message || "API Key không hợp lệ hoặc không có quyền Google Drive API v3. Vui lòng kiểm tra lại cấu hình trên Google Cloud Console.");
+        console.warn("Chuyển sang quét Proxy do API Key lỗi...");
       }
     }
 
-    // Dự phòng proxy cho người không dùng API key
+    // Dự phòng proxy
     const seenIds = new Set<string>();
     const seenFolders = new Set<string>();
 
@@ -425,8 +431,8 @@ export default function App() {
 
     const fetchWithProxy = async (targetUrl: string): Promise<string> => {
       const proxies = [
-        (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
         (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+        (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
         (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
       ];
 
@@ -447,11 +453,11 @@ export default function App() {
           lastError = err;
         }
       }
-      throw new Error("Tất cả CORS proxy đều bị Google chặn. Vì ứng dụng đang chạy trên Static Hosting, vui lòng nhấp vào 'CÀI ĐẶT API TĨNH' (hình chìa khóa góc trên bên phải) và nhập Google Drive API Key để quét trực tiếp vĩnh viễn không bao giờ lỗi.");
+      throw new Error("Tất cả CORS proxy đều bị chặn. Vui lòng chạy ứng dụng ở môi trường local hoặc cài đặt backend.");
     };
 
     const extractFolderRecursive = async (currentFolderId: string, currentPath: string = "") => {
-      const url = `https://drive.google.com/embeddedfolderview?id=${currentFolderId}`;
+      const url = `https://drive.google.com/drive/folders/${currentFolderId}`;
       const html = await fetchWithProxy(url);
 
       const hexObjRegex = /\\x22([a-zA-Z0-9_-]{25,45})\\x22,\s*(?:\\x5b(?:\\x22([a-zA-Z0-9_-]{25,45})\\x22)?\\x5d|null)\s*,\s*\\x22(.*?)\\x22,\s*\\x22(.*?)\\x22/gi;
