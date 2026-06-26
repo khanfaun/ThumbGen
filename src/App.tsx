@@ -349,17 +349,28 @@ export default function App() {
   // Helper function to extract Drive folder on Client-side
   const extractDriveFolderClientSide = async (folderId: string): Promise<DriveFile[]> => {
     const files: DriveFile[] = [];
+    const imageExtensions = "png|jpe?g|jfif|webp|svg|gif|heic|heif|bmp|tiff?|raw|cr2|nef|arw|dng|psd|ai|eps|pdf";
+    const fileExtRegex = new RegExp(`\\.(${imageExtensions})$`, "i");
 
     // Nếu người dùng có nhập API Key (Triệt để 100% không lỗi CORS/404)
     if (googleApiKey) {
       console.log("Sử dụng Google Drive API chính thức với API Key...");
       try {
         const fetchPage = async (pageToken?: string) => {
-          let url = `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+trashed=false&fields=nextPageToken,files(id,name,mimeType)&key=${googleApiKey}&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true`;
+          const query = `'${folderId}' in parents and trashed=false`;
+          let url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=nextPageToken,files(id,name,mimeType)&key=${googleApiKey}&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true`;
           if (pageToken) url += `&pageToken=${pageToken}`;
+          
           const res = await fetch(url);
           if (!res.ok) {
-            throw new Error(`Google API phản hồi lỗi: ${res.statusText}`);
+            let errorMsg = res.statusText;
+            try {
+              const errData = await res.json();
+              if (errData && errData.error && errData.error.message) {
+                errorMsg = errData.error.message;
+              }
+            } catch (e) {}
+            throw new Error(`Google API phản hồi lỗi (${res.status}): ${errorMsg}`);
           }
           const data = await res.json();
           
@@ -367,7 +378,6 @@ export default function App() {
             for (const f of data.files) {
               if (f.mimeType === "application/vnd.google-apps.folder") {
                 // Không hỗ trợ đệ quy qua API tĩnh để tránh vượt giới hạn quota hoặc chậm, chỉ lấy trực tiếp.
-                // Nếu muốn hỗ trợ đệ quy, có thể cải tiến sau.
               } else if (f.mimeType.startsWith("image/") || fileExtRegex.test(f.name)) {
                 files.push({
                   id: f.id,
@@ -387,7 +397,7 @@ export default function App() {
         return files;
       } catch (err: any) {
         console.error("Lỗi khi dùng API Key:", err);
-        throw new Error("API Key không hợp lệ hoặc không có quyền Google Drive API v3. Vui lòng kiểm tra lại cấu hình trên Google Cloud Console.");
+        throw new Error(err.message || "API Key không hợp lệ hoặc không có quyền Google Drive API v3. Vui lòng kiểm tra lại cấu hình trên Google Cloud Console.");
       }
     }
 
@@ -412,9 +422,6 @@ export default function App() {
         return str;
       }
     };
-
-    const imageExtensions = "png|jpe?g|jfif|webp|svg|gif|heic|heif|bmp|tiff?|raw|cr2|nef|arw|dng|psd|ai|eps|pdf";
-    const fileExtRegex = new RegExp(`\\.(${imageExtensions})$`, "i");
 
     const fetchWithProxy = async (targetUrl: string): Promise<string> => {
       const proxies = [
