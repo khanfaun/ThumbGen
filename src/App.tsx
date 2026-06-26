@@ -347,8 +347,8 @@ export default function App() {
   ]);
 
   // Helper function to extract Drive folder on Client-side
-  const extractDriveFolderClientSide = async (folderId: string): Promise<DriveFile[]> => {
-    const files: DriveFile[] = [];
+  const extractDriveFolderClientSide = async (folderId: string): Promise<AppDriveFile[]> => {
+    const files: AppDriveFile[] = [];
     const imageExtensions = "png|jpe?g|jfif|webp|svg|gif|heic|heif|bmp|tiff?|raw|cr2|nef|arw|dng|psd|ai|eps|pdf";
     const fileExtRegex = new RegExp(`\\.(${imageExtensions})$`, "i");
 
@@ -640,7 +640,7 @@ export default function App() {
       const newItems: ImageItem[] = await Promise.all(
         filtered.map(async (file) => {
           const isTiff = file.name.toLowerCase().endsWith(".tif") || file.name.toLowerCase().endsWith(".tiff");
-          let originalUrl = `https://drive.google.com/thumbnail?sz=w1600&id=${file.id}`;
+          let originalUrl = `/api/proxy-image?url=${encodeURIComponent(`https://drive.google.com/thumbnail?sz=w1600&id=${file.id}`)}`;
           let status: ImageItem["status"] = "pending";
           let errorMsg: string | undefined = undefined;
 
