@@ -1,0 +1,8 @@
+{
+  "name": "Trình tạo Thumbnail Sản phẩm 3",
+  "description": "Ứng dụng tạo ảnh thu nhỏ sản phẩm hàng loạt từ liên kết Google Drive hoặc tải lên trực tiếp, tự động chèn logo thương hiệu, điều chỉnh kích thước và tự động căn giữa sản phẩm chống lệch.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
